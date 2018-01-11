@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # 
 # The MIT License (MIT)
@@ -21,30 +20,28 @@ from datetime import datetime
 from hashlib import md5
 from tornado.web import RequestHandler, Application
 from tornado.ioloop import IOLoop
-from udplogger.client import Client
+from .outputs import create_output
 
 class NotPermitted(Exception):
     pass
 
 class MainHandler(RequestHandler):
 
-    def initialize(self, host, port, default_table, force_default_table=False,
-                   include_request_info=False, enforce_token=False,
-                   token_data=None, token_salt=None):
-        self.udp = Client(host, port)
-        self.default_table = default_table
-        self.force_default_table = force_default_table
-        self.include_request_info = include_request_info
-        self.enforce_token = enforce_token
-        self.token_data = token_data
-        self.token_salt = token_salt
+    def initialize(self, config):
+        self.default_target = config['default_target']
+        self.force_default_target = config['force_default_target']
+        self.include_request_info = config['include_request_info']
+        self.enforce_token = config['token']['enforce']
+        self.token_data = config['token']['data']
+        self.token_salt = config['token']['salt']
+        self.outputs = [create_output(output) for output in config['outputs']]
 
     def get(self):
         try:
-            if self.force_default_table or 't' not in self.request.arguments:
-                table = self.default_table
+            if self.force_default_target or 't' not in self.request.arguments:
+                target = self.default_target
             else:
-                table = self.get_argument('t')
+                target = self.get_argument('t')
             data = json.loads(self.get_argument('d'))
             if self.enforce_token:
                 token = md5(':'.join([
@@ -62,7 +59,11 @@ class MainHandler(RequestHandler):
                 data['agent_string'] = self.request.headers.get('User-Agent', '')
                 agent_info = httpagentparser.simple_detect(data['agent_string'])
                 data.update(zip(('agent_os', 'agent_browser'), agent_info))
-            self.udp.send(table=table, data=data)
+            for output in self.outputs:
+                try:
+                    output.send(target=target, data=data)
+                except Exception as e:
+                    print("{0}: {1}: {2}".format(e.__class__.__name__, e, self.request.arguments))
         except Exception as e:
             print("{0}: {1}: {2}".format(e.__class__.__name__, e, self.request.arguments))
 
@@ -74,33 +75,22 @@ class MainHandler(RequestHandler):
         self.set_header('Content-Type', 'image/gif')
         self.write('GIF89a\x01\x00\x01\x00\x80\xff\x00\xff\xff\xff\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;')
 
-def run():
-    arg_parser = argparse.ArgumentParser()
-    arg_parser.description = 'A simple web server to forward data to various backends.'
-    arg_parser.add_argument('-c', '--config', metavar='FILE',
-                            default='config.yaml',
-                            help='path to config file (default: %(default)s)')
-    args = arg_parser.parse_args()
+def main():
+    args = argparse.ArgumentParser()
+    args.description = 'A simple web server to forward data to various backends.'
+    args.add_argument('-c', '--config', metavar='FILE', default='config.yaml',
+                      help='path to config file (default: %(default)s)')
+    args = args.parse_args()
 
     with open(args.config, 'r') as file:
         config = yaml.load(file)
 
     app = Application([
         (r".*", MainHandler, {
-            'host': config['server']['host'],
-            'port': config['server']['port'],
-            'default_table': config['web']['default_table'],
-            'force_default_table': config['web']['force_default_table'],
-            'include_request_info': config['web']['include_request_info'],
-            'enforce_token': config['web']['token']['enforce'],
-            'token_data': config['web']['token']['data'],
-            'token_salt': config['web']['token']['salt']
+            'config': config
         })
     ])
-    app.listen(config['web']['port'], xheaders=True)
+    app.listen(config['port'], xheaders=True)
 
-    print("Server listening on port {0}".format(config['web']['port']))
+    print("Server listening on port {0}".format(config['port']))
     IOLoop.current().start()
-
-if __name__ == "__main__":
-    run()

@@ -45,9 +45,13 @@ setup(
     packages=[
         'weblogger'
     ],
+    entry_points = {
+        'console_scripts': [
+            'weblogger=weblogger.server:main'
+        ]
+    },
     install_requires=[
         'PyYAML',
-        'argparse',
         'tornado',
         'httpagentparser'
     ]

@@ -18,12 +18,9 @@ pip install --upgrade pip
 pip install ipython
 pip install pytest
 
-# install dependencies
-pip install PyYAML 
-pip install argparse
-pip install tornado
-pip install httpagentparser
+# install package
+python setup.py install
 
-# install drivers
+# install optional dependencies
 pip install udplogger
 pip install redmsg
