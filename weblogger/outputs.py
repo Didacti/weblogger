@@ -52,7 +52,7 @@ class RedMsgOutput(Output):
                                 ttl=config.get('ttl', 3600))
 
     def _send(self, target, data):
-        self.client.publish(target, json.dumps(data), ttl=self.ttl)
+        self.client.publish(target, json.dumps(data))
 
 OUTPUTS = {
     'udplogger': UDPLoggerOutput,
