@@ -44,7 +44,7 @@ class UDPLoggerOutput(Output):
 class RedMsgOutput(Output):
 
     def __init__(self, config):
-        super(UDPLoggerOutput, self).__init__(config)
+        super(RedMsgOutput, self).__init__(config)
         from redmsg import Publisher
         self.client = Publisher(host=config['host'],
                                 port=config['port'],
