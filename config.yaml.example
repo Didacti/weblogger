@@ -16,4 +16,4 @@ outputs:
       db: 0
       ttl: 3600
       match:
-          key: value
+          - key: value

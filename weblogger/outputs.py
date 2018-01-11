@@ -17,12 +17,17 @@ import json
 class Output(object):
 
     def __init__(self, config):
-        self.match = config.get('match', {})
+        self.match = config.get('match', [])
 
     def send(self, target, data):
         if self.match:
-            for k, v in self.match:
-                if data.get(k) == v:
+            for match in self.match:
+                matched = True
+                for k in match:
+                    if data.get(k) != match[k]:
+                        matched = False
+                        break
+                if matched:
                     return self._send(target, data)
         else:
             return self._send(target, data)
