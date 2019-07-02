@@ -52,7 +52,7 @@ setup(
     },
     install_requires=[
         'PyYAML',
-        'tornado',
+        'tornado>=5,<6',
         'httpagentparser'
     ]
 )
